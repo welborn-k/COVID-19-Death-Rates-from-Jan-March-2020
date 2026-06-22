@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.min.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet.photon.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        #map-title {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255,255,255,0.92);
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            font-weight: bold;
+            color: #222;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        #map-title span {
+            font-size: 11px;
+            font-weight: normal;
+            color: #555;
+            display: block;
+            text-align: center;
+            margin-top: 2px;
+        }
+        #legend {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(255,255,255,0.92);
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #222;
+            min-width: 190px;
+        }
+        #legend .legend-title {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
+        }
+        #legend .legend-section {
+            margin-top: 8px;
+            font-weight: bold;
+            font-size: 11px;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        #legend .legend-row {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+            gap: 8px;
+        }
+        #legend .legend-color {
+            width: 22px;
+            height: 14px;
+            border: 1px solid #999;
+            flex-shrink: 0;
+            border-radius: 2px;
+        }
+        #legend .legend-circle {
+            background: rgba(227,26,28,0.85);
+            border: 1px solid rgba(250,250,250,1);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+
+        <div id="map-title">
+            COVID-19 Death Rate &amp; Cumulative Deaths — World Map
+            <span>Data as of 19 March 2020 &nbsp;|&nbsp; Source: JHU CSSE / QGIS2Web</span>
+        </div>
+
+        <div id="legend">
+            <div class="legend-title">Map Legend</div>
+
+            <div class="legend-section">Cumulative deaths (choropleth)</div>
+            <div class="legend-row">
+                <div class="legend-color" style="background:rgba(255,245,240,1.0);"></div>
+                <span>0 deaths</span>
+            </div>
+            <div class="legend-row">
+                <div class="legend-color" style="background:rgba(252,164,134,1.0);"></div>
+                <span>0 deaths (no data)</span>
+            </div>
+            <div class="legend-row">
+                <div class="legend-color" style="background:rgba(234,55,42,1.0);"></div>
+                <span>0 – 1 deaths</span>
+            </div>
+            <div class="legend-row">
+                <div class="legend-color" style="background:rgba(103,0,13,1.0);"></div>
+                <span>1 – 3,405 deaths</span>
+            </div>
+
+            <div class="legend-section" style="margin-top:10px;">Death rate % (proportional circles)</div>
+            <div class="legend-row">
+                <div class="legend-circle" style="width:8px;height:8px;"></div>
+                <span>0 – 3.4 %</span>
+            </div>
+            <div class="legend-row">
+                <div class="legend-circle" style="width:11px;height:11px;"></div>
+                <span>3.4 – 6.8 %</span>
+            </div>
+            <div class="legend-row">
+                <div class="legend-circle" style="width:14px;height:14px;"></div>
+                <span>6.8 – 10.2 %</span>
+            </div>
+            <div class="legend-row">
+                <div class="legend-circle" style="width:17px;height:17px;"></div>
+                <span>10.2 – 13.6 %</span>
+            </div>
+            <div class="legend-row">
+                <div class="legend-circle" style="width:20px;height:20px;"></div>
+                <span>13.6 – 17.0 %</span>
+            </div>
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/L.Control.Locate.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.photon.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="data/COVIDEDEATHRATE_1.js"></script>
+        <script src="data/WorldDeathratefromCOVID19Data_2.js"></script>
+        <script>
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[-84.50464395117874,-180.0],[90.0,180.0]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/qgis2web/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // modify popup if contains media
+        function addClassToPopupIfMedia(content, popup) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            var imgTd = tempDiv.querySelector('td img');
+            if (imgTd) {
+                var src = imgTd.getAttribute('src');
+                if (/\.(jpg|jpeg|png|gif|bmp|webp|avif)$/i.test(src)) {
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp3|wav|ogg|aac)$/i.test(src)) {
+                    var audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = src;
+                    imgTd.parentNode.replaceChild(audio, imgTd);
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp4|webm|ogg|mov)$/i.test(src)) {
+                    var video = document.createElement('video');
+                    video.controls = true;
+                    video.src = src;
+                    video.style.width = "400px";
+                    video.style.height = "300px";
+                    video.style.maxHeight = "60vh";
+                    video.style.maxWidth = "60vw";
+                    imgTd.parentNode.replaceChild(video, imgTd);
+                    popup._contentNode.classList.add('media');
+                    // Aggiorna il popup quando il video carica i metadati
+                    video.addEventListener('loadedmetadata', function() {
+                        popup.update();
+                    });
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else {
+                    popup._contentNode.classList.remove('media');
+                }
+            } else {
+                popup._contentNode.classList.remove('media');
+            }
+        }
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_OSMStandard_0');
+        map.getPane('pane_OSMStandard_0').style.zIndex = 400;
+        var layer_OSMStandard_0 = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            pane: 'pane_OSMStandard_0',
+            opacity: 1.0,
+            attribution: '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, CC-BY-SA</a>',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 19
+        });
+        layer_OSMStandard_0;
+        map.addLayer(layer_OSMStandard_0);
+        function pop_COVIDEDEATHRATE_1(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(String(feature.properties['fid']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['iso_a2'] !== null ? autolinker.link(String(feature.properties['iso_a2']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['NAME'] !== null ? autolinker.link(String(feature.properties['NAME']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['FIPS_10_'] !== null ? autolinker.link(String(feature.properties['FIPS_10_']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ISO_A3'] !== null ? autolinker.link(String(feature.properties['ISO_A3']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WB_A2'] !== null ? autolinker.link(String(feature.properties['WB_A2']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['WB_A3'] !== null ? autolinker.link(String(feature.properties['WB_A3']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/22/20_sum'] !== null ? autolinker.link(String(feature.properties['1/22/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/23/20_sum'] !== null ? autolinker.link(String(feature.properties['1/23/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/24/20_sum'] !== null ? autolinker.link(String(feature.properties['1/24/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/25/20_sum'] !== null ? autolinker.link(String(feature.properties['1/25/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/26/20_sum'] !== null ? autolinker.link(String(feature.properties['1/26/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/27/20_sum'] !== null ? autolinker.link(String(feature.properties['1/27/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/28/20_sum'] !== null ? autolinker.link(String(feature.properties['1/28/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/29/20_sum'] !== null ? autolinker.link(String(feature.properties['1/29/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/30/20_sum'] !== null ? autolinker.link(String(feature.properties['1/30/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/31/20_sum'] !== null ? autolinker.link(String(feature.properties['1/31/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/1/20_sum'] !== null ? autolinker.link(String(feature.properties['2/1/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/2/20_sum'] !== null ? autolinker.link(String(feature.properties['2/2/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/3/20_sum'] !== null ? autolinker.link(String(feature.properties['2/3/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/4/20_sum'] !== null ? autolinker.link(String(feature.properties['2/4/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/5/20_sum'] !== null ? autolinker.link(String(feature.properties['2/5/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/6/20_sum'] !== null ? autolinker.link(String(feature.properties['2/6/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/7/20_sum'] !== null ? autolinker.link(String(feature.properties['2/7/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/8/20_sum'] !== null ? autolinker.link(String(feature.properties['2/8/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/9/20_sum'] !== null ? autolinker.link(String(feature.properties['2/9/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/10/20_sum'] !== null ? autolinker.link(String(feature.properties['2/10/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/11/20_sum'] !== null ? autolinker.link(String(feature.properties['2/11/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/12/20_sum'] !== null ? autolinker.link(String(feature.properties['2/12/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/13/20_sum'] !== null ? autolinker.link(String(feature.properties['2/13/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/14/20_sum'] !== null ? autolinker.link(String(feature.properties['2/14/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/15/20_sum'] !== null ? autolinker.link(String(feature.properties['2/15/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/16/20_sum'] !== null ? autolinker.link(String(feature.properties['2/16/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/17/20_sum'] !== null ? autolinker.link(String(feature.properties['2/17/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/18/20_sum'] !== null ? autolinker.link(String(feature.properties['2/18/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/19/20_sum'] !== null ? autolinker.link(String(feature.properties['2/19/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/20/20_sum'] !== null ? autolinker.link(String(feature.properties['2/20/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/21/20_sum'] !== null ? autolinker.link(String(feature.properties['2/21/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/22/20_sum'] !== null ? autolinker.link(String(feature.properties['2/22/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/23/20_sum'] !== null ? autolinker.link(String(feature.properties['2/23/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/24/20_sum'] !== null ? autolinker.link(String(feature.properties['2/24/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/25/20_sum'] !== null ? autolinker.link(String(feature.properties['2/25/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/26/20_sum'] !== null ? autolinker.link(String(feature.properties['2/26/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/27/20_sum'] !== null ? autolinker.link(String(feature.properties['2/27/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/28/20_sum'] !== null ? autolinker.link(String(feature.properties['2/28/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/29/20_sum'] !== null ? autolinker.link(String(feature.properties['2/29/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/1/20_sum'] !== null ? autolinker.link(String(feature.properties['3/1/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/2/20_sum'] !== null ? autolinker.link(String(feature.properties['3/2/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/3/20_sum'] !== null ? autolinker.link(String(feature.properties['3/3/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/4/20_sum'] !== null ? autolinker.link(String(feature.properties['3/4/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/5/20_sum'] !== null ? autolinker.link(String(feature.properties['3/5/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/6/20_sum'] !== null ? autolinker.link(String(feature.properties['3/6/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/7/20_sum'] !== null ? autolinker.link(String(feature.properties['3/7/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/8/20_sum'] !== null ? autolinker.link(String(feature.properties['3/8/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/9/20_sum'] !== null ? autolinker.link(String(feature.properties['3/9/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/10/20_sum'] !== null ? autolinker.link(String(feature.properties['3/10/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/11/20_sum'] !== null ? autolinker.link(String(feature.properties['3/11/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/12/20_sum'] !== null ? autolinker.link(String(feature.properties['3/12/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/13/20_sum'] !== null ? autolinker.link(String(feature.properties['3/13/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/14/20_sum'] !== null ? autolinker.link(String(feature.properties['3/14/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/15/20_sum'] !== null ? autolinker.link(String(feature.properties['3/15/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/16/20_sum'] !== null ? autolinker.link(String(feature.properties['3/16/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/17/20_sum'] !== null ? autolinker.link(String(feature.properties['3/17/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/18/20_sum'] !== null ? autolinker.link(String(feature.properties['3/18/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/19/20_sum'] !== null ? autolinker.link(String(feature.properties['3/19/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/20/20_sum'] !== null ? autolinker.link(String(feature.properties['3/20/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/21/20_sum'] !== null ? autolinker.link(String(feature.properties['3/21/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/22/20_sum'] !== null ? autolinker.link(String(feature.properties['3/22/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/23/20_sum'] !== null ? autolinker.link(String(feature.properties['3/23/20_sum']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_COVIDEDEATHRATE_1_0(feature) {
+            if (feature.properties['3/19/20_sum'] >= 0.000000 && feature.properties['3/19/20_sum'] <= 0.000000 ) {
+                return {
+                pane: 'pane_COVIDEDEATHRATE_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,245,240,1.0)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['3/19/20_sum'] >= 0.000000 && feature.properties['3/19/20_sum'] <= 0.000000 ) {
+                return {
+                pane: 'pane_COVIDEDEATHRATE_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(252,164,134,1.0)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['3/19/20_sum'] >= 0.000000 && feature.properties['3/19/20_sum'] <= 1.000000 ) {
+                return {
+                pane: 'pane_COVIDEDEATHRATE_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(234,55,42,1.0)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['3/19/20_sum'] >= 1.000000 && feature.properties['3/19/20_sum'] <= 3405.000000 ) {
+                return {
+                pane: 'pane_COVIDEDEATHRATE_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(103,0,13,1.0)',
+                interactive: true,
+            }
+            }
+        }
+        map.createPane('pane_COVIDEDEATHRATE_1');
+        map.getPane('pane_COVIDEDEATHRATE_1').style.zIndex = 401;
+        map.getPane('pane_COVIDEDEATHRATE_1').style['mix-blend-mode'] = 'normal';
+        var layer_COVIDEDEATHRATE_1 = new L.geoJson(json_COVIDEDEATHRATE_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_COVIDEDEATHRATE_1',
+            layerName: 'layer_COVIDEDEATHRATE_1',
+            pane: 'pane_COVIDEDEATHRATE_1',
+            onEachFeature: pop_COVIDEDEATHRATE_1,
+            style: style_COVIDEDEATHRATE_1_0,
+        });
+        bounds_group.addLayer(layer_COVIDEDEATHRATE_1);
+        map.addLayer(layer_COVIDEDEATHRATE_1);
+        function pop_WorldDeathratefromCOVID19Data_2(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Province/S'] !== null ? autolinker.link(String(feature.properties['Province/S']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Country/Re'] !== null ? autolinker.link(String(feature.properties['Country/Re']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Lat'] !== null ? autolinker.link(String(feature.properties['Lat']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Long'] !== null ? autolinker.link(String(feature.properties['Long']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/22/20'] !== null ? autolinker.link(String(feature.properties['1/22/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/23/20'] !== null ? autolinker.link(String(feature.properties['1/23/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/24/20'] !== null ? autolinker.link(String(feature.properties['1/24/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/25/20'] !== null ? autolinker.link(String(feature.properties['1/25/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/26/20'] !== null ? autolinker.link(String(feature.properties['1/26/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/27/20'] !== null ? autolinker.link(String(feature.properties['1/27/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/28/20'] !== null ? autolinker.link(String(feature.properties['1/28/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/29/20'] !== null ? autolinker.link(String(feature.properties['1/29/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/30/20'] !== null ? autolinker.link(String(feature.properties['1/30/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['1/31/20'] !== null ? autolinker.link(String(feature.properties['1/31/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/1/20'] !== null ? autolinker.link(String(feature.properties['2/1/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/2/20'] !== null ? autolinker.link(String(feature.properties['2/2/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/3/20'] !== null ? autolinker.link(String(feature.properties['2/3/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/4/20'] !== null ? autolinker.link(String(feature.properties['2/4/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/5/20'] !== null ? autolinker.link(String(feature.properties['2/5/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/6/20'] !== null ? autolinker.link(String(feature.properties['2/6/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/7/20'] !== null ? autolinker.link(String(feature.properties['2/7/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/8/20'] !== null ? autolinker.link(String(feature.properties['2/8/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/9/20'] !== null ? autolinker.link(String(feature.properties['2/9/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/10/20'] !== null ? autolinker.link(String(feature.properties['2/10/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/11/20'] !== null ? autolinker.link(String(feature.properties['2/11/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/12/20'] !== null ? autolinker.link(String(feature.properties['2/12/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/13/20'] !== null ? autolinker.link(String(feature.properties['2/13/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/14/20'] !== null ? autolinker.link(String(feature.properties['2/14/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/15/20'] !== null ? autolinker.link(String(feature.properties['2/15/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/16/20'] !== null ? autolinker.link(String(feature.properties['2/16/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/17/20'] !== null ? autolinker.link(String(feature.properties['2/17/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/18/20'] !== null ? autolinker.link(String(feature.properties['2/18/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/19/20'] !== null ? autolinker.link(String(feature.properties['2/19/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/20/20'] !== null ? autolinker.link(String(feature.properties['2/20/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/21/20'] !== null ? autolinker.link(String(feature.properties['2/21/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/22/20'] !== null ? autolinker.link(String(feature.properties['2/22/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/23/20'] !== null ? autolinker.link(String(feature.properties['2/23/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/24/20'] !== null ? autolinker.link(String(feature.properties['2/24/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/25/20'] !== null ? autolinker.link(String(feature.properties['2/25/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/26/20'] !== null ? autolinker.link(String(feature.properties['2/26/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/27/20'] !== null ? autolinker.link(String(feature.properties['2/27/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/28/20'] !== null ? autolinker.link(String(feature.properties['2/28/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['2/29/20'] !== null ? autolinker.link(String(feature.properties['2/29/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/1/20'] !== null ? autolinker.link(String(feature.properties['3/1/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/2/20'] !== null ? autolinker.link(String(feature.properties['3/2/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/3/20'] !== null ? autolinker.link(String(feature.properties['3/3/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/4/20'] !== null ? autolinker.link(String(feature.properties['3/4/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/5/20'] !== null ? autolinker.link(String(feature.properties['3/5/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/6/20'] !== null ? autolinker.link(String(feature.properties['3/6/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/7/20'] !== null ? autolinker.link(String(feature.properties['3/7/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/8/20'] !== null ? autolinker.link(String(feature.properties['3/8/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/9/20'] !== null ? autolinker.link(String(feature.properties['3/9/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/10/20'] !== null ? autolinker.link(String(feature.properties['3/10/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/11/20'] !== null ? autolinker.link(String(feature.properties['3/11/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/12/20'] !== null ? autolinker.link(String(feature.properties['3/12/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/13/20'] !== null ? autolinker.link(String(feature.properties['3/13/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/14/20'] !== null ? autolinker.link(String(feature.properties['3/14/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/15/20'] !== null ? autolinker.link(String(feature.properties['3/15/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/16/20'] !== null ? autolinker.link(String(feature.properties['3/16/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/17/20'] !== null ? autolinker.link(String(feature.properties['3/17/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/18/20'] !== null ? autolinker.link(String(feature.properties['3/18/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/19/20'] !== null ? autolinker.link(String(feature.properties['3/19/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/20/20'] !== null ? autolinker.link(String(feature.properties['3/20/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/21/20'] !== null ? autolinker.link(String(feature.properties['3/21/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/22/20'] !== null ? autolinker.link(String(feature.properties['3/22/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['3/23/20'] !== null ? autolinker.link(String(feature.properties['3/23/20']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_WorldDeathratefromCOVID19Data_2_0(feature) {
+            if (feature.properties['3/19/20'] >= 0.000000 && feature.properties['3/19/20'] <= 3.400000 ) {
+                return {
+                pane: 'pane_WorldDeathratefromCOVID19Data_2',
+                radius: 2.0,
+                opacity: 1,
+                color: 'rgba(250,250,250,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(227,26,28,1.0)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['3/19/20'] >= 3.400000 && feature.properties['3/19/20'] <= 6.800000 ) {
+                return {
+                pane: 'pane_WorldDeathratefromCOVID19Data_2',
+                radius: 3.0,
+                opacity: 1,
+                color: 'rgba(250,250,250,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(227,26,28,1.0)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['3/19/20'] >= 6.800000 && feature.properties['3/19/20'] <= 10.200000 ) {
+                return {
+                pane: 'pane_WorldDeathratefromCOVID19Data_2',
+                radius: 4.0,
+                opacity: 1,
+                color: 'rgba(250,250,250,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(227,26,28,1.0)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['3/19/20'] >= 10.200000 && feature.properties['3/19/20'] <= 13.600000 ) {
+                return {
+                pane: 'pane_WorldDeathratefromCOVID19Data_2',
+                radius: 5.0,
+                opacity: 1,
+                color: 'rgba(250,250,250,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(227,26,28,1.0)',
+                interactive: true,
+            }
+            }
+            if (feature.properties['3/19/20'] >= 13.600000 && feature.properties['3/19/20'] <= 17.000000 ) {
+                return {
+                pane: 'pane_WorldDeathratefromCOVID19Data_2',
+                radius: 6.0,
+                opacity: 1,
+                color: 'rgba(250,250,250,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(227,26,28,1.0)',
+                interactive: true,
+            }
+            }
+        }
+        map.createPane('pane_WorldDeathratefromCOVID19Data_2');
+        map.getPane('pane_WorldDeathratefromCOVID19Data_2').style.zIndex = 402;
+        map.getPane('pane_WorldDeathratefromCOVID19Data_2').style['mix-blend-mode'] = 'normal';
+        var layer_WorldDeathratefromCOVID19Data_2 = new L.geoJson(json_WorldDeathratefromCOVID19Data_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_WorldDeathratefromCOVID19Data_2',
+            layerName: 'layer_WorldDeathratefromCOVID19Data_2',
+            pane: 'pane_WorldDeathratefromCOVID19Data_2',
+            onEachFeature: pop_WorldDeathratefromCOVID19Data_2,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.circleMarker(latlng, style_WorldDeathratefromCOVID19Data_2_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_WorldDeathratefromCOVID19Data_2);
+        map.addLayer(layer_WorldDeathratefromCOVID19Data_2);
+        setBounds();
+        </script>        
+    </body>
+</html>
